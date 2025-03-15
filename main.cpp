@@ -45,8 +45,8 @@ void clear() {
 
 	// clear stack
 	for (int i = 0; i < SIZE*SIZE; i++) {
-		stack[i].x = 0;
-		stack[i].y = 0;
+		stack[i].x = -1;
+		stack[i].y = -1;
 	}
 }
 
@@ -71,7 +71,7 @@ void setup_memory() {
 
 	// set snake body in memory
 	for (int i=0; i<head_ptr; i++) {
-		if (stack[i].x != 0 && stack[i].y != 0) {
+		if (stack[i].x != -1 || stack[i].y != -1) {
 			mem[stack[i].y][stack[i].x] = CHAR_BODY;
 		}
 	}
@@ -112,22 +112,22 @@ int main() {
 	apple.x = 6;
 	apple.y = 1;
 
-	stack[0].x = 1;
-	stack[0].y = 1;
+	stack[0].x = 0;
+	stack[0].y = 0;
 
-	stack[1].x = 2;
-	stack[1].y = 1;
+	stack[1].x = 1;
+	stack[1].y = 0;
 
-	stack[2].x = 3;
-	stack[2].y = 1;
+	stack[2].x = 2;
+	stack[2].y = 0;
 
 	head_ptr = 2;
 
 	move.x = 1;
 	move.y = 0;
 
-	for (int t=0; t<5; t++) {
-		if (t == 3) {
+	for (int t=0; t<9; t++) {
+		if (t == 4) {
 			move.x = 0;
 			move.y = 1;
 		}
