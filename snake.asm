@@ -32,7 +32,8 @@
 .eqv WIDTH 64
 .eqv HEIGHT 64
 
-.eqv RED 0x00ff0000 # 0x--RRGGBB
+# COLORS (0x--RRGGBB)
+.eqv RED 0x00ff0000
 .eqv GREEN 0x0000ff00
 .eqv BLUE 0x000000ff
 .eqv BACKGROUND 0x00000000
@@ -60,6 +61,29 @@
 	blt $t0, STACK_HEAD_PTR, loop_shift_stack
 .end_macro
 
+.macro update_apple
+	# $t0 -> i
+	# $t1 -> x
+	# $t2 -> y
+	loop_update_apple_1:
+	random_int(APPLE_X, WIDTH)
+	random_int(APPLE_Y, HEIGHT)
+
+	# check if not colliding with snake
+
+	move $t0, STACK_START_ADDR
+	loop_update_apple_2:
+		lw $t1, 0($t0) # x
+		lw $t2, 4($t0) # y 
+
+		beq $t1, APPLE_X, loop_update_apple_1
+		beq $t2, APPLE_Y, loop_update_apple_1
+
+		addi $t0, $t0, 8
+
+		ble $t0, STACK_HEAD_PTR, loop_update_apple_2
+.end_macro
+
 .macro update
 	lw HEAD_NEXT_X, (STACK_HEAD_PTR) # head_next_x
 	add HEAD_NEXT_X, HEAD_NEXT_X, MOVE_X
@@ -80,12 +104,9 @@
 	j update_case_not_eat
 	# CASE EAT
 	update_case_eat:
-		print_int(APPLE_Y) # DEBUG
-
 		addi STACK_HEAD_PTR, STACK_HEAD_PTR, 8 # increase STACK_HEAD_PTR
 		# update apple position
-		addi APPLE_X, $zero, 3
-		addi APPLE_Y, $zero, 16
+		update_apple()
 		# plot apple
 		set_color(RED)
 		move DISPLAY_X, APPLE_X
@@ -96,7 +117,6 @@
 
 	# CASE NOT EAT
 	update_case_not_eat:
-		# print_int(APPLE_X) # DEBUG
 		# clear shifted point (last snake tail)
 		set_color(BACKGROUND)
 		lw DISPLAY_X, (STACK_START_ADDR)  # x
@@ -111,7 +131,6 @@
 	# set next snake head position
 	sw HEAD_NEXT_X, (STACK_HEAD_PTR)
 	sw HEAD_NEXT_Y, 4(STACK_HEAD_PTR)
-
 .end_macro
 
 .data
