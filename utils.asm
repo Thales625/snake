@@ -1,11 +1,12 @@
-.macro read_int(%x)
+.macro read_int(%save_reg)
 	li $v0, 5
 	syscall
-	move %x, $v0
+
+	add %save_reg, $zero, $v0
 .end_macro
 
-.macro print_int(%x)
-	move $a0, %x
+.macro print_int(%reg)
+	move $a0, %reg
 	li $v0, 1
 	syscall
 .end_macro
@@ -17,10 +18,19 @@
 	syscall
 .end_macro
 
-.macro print_string(%x)
+.macro print_string(%address)
 	li $v0, 4
-	la $a0, %x
+	la $a0, %address
 	syscall
+.end_macro
+
+
+.macro random_int(%save_reg, %max)
+	li $a1, %max
+    li $v0, 42
+    syscall
+
+	add %save_reg, $zero, $a0
 .end_macro
 
 .macro sleep(%time) # seconds
