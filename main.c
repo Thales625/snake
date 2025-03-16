@@ -50,23 +50,8 @@ void show_stack() { // print stack
 	}
 }
 
-void setup_memory() {
-	// set snake head in memory
-	mem[stack[2*head_ptr+1]][stack[2*head_ptr]] = CHAR_HEAD;
-
-	// set snake body in memory
-	for (int i=0; i<2*head_ptr; i+=2) {
-		if (stack[i] != -1 && stack[i+1] != -1) {
-			mem[stack[i+1]][stack[i]] = CHAR_BODY;
-		}
-	}
-
-	// apple
-	mem[apple_y][apple_x] = CHAR_APPLE;
-}
-
 void shift_stack() { // shift-left stack
-	for (int i=0; i<2*head_ptr; i++) {
+	for (int i=0; i<2*head_ptr; i+=2) {
 		stack[i] = stack[i+2];
 		stack[i+1] = stack[i+3];
 	}
@@ -91,6 +76,22 @@ void update() {
 
 	stack[2*head_ptr] = head_next_x;
 	stack[2*head_ptr+1] = head_next_y;
+}
+
+void setup_memory() {
+	// set snake head in memory
+	// mem[stack[2*head_ptr+1]][stack[2*head_ptr]] = CHAR_HEAD;
+	mem[head_next_y][head_next_x] = CHAR_HEAD;
+
+	// set snake body in memory
+	for (int i=0; i<2*head_ptr; i+=2) {
+		if (stack[i] != -1 && stack[i+1] != -1) {
+			mem[stack[i+1]][stack[i]] = CHAR_BODY;
+		}
+	}
+
+	// apple
+	mem[apple_y][apple_x] = CHAR_APPLE;
 }
 
 int main() {

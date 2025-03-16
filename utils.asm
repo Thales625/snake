@@ -1,23 +1,23 @@
-.macro read_int (%x)
+.macro read_int(%x)
 	li $v0, 5
 	syscall
 	move %x, $v0
 .end_macro
 
-.macro print_int (%x)
+.macro print_int(%x)
 	move $a0, %x
 	li $v0, 1
 	syscall
 .end_macro
 
-.macro read_string (%address)
+.macro read_string(%address)
 	li $v0, 8
 	la $a0, %address
 	li $a1, 32
 	syscall
 .end_macro
 
-.macro print_string (%x)
+.macro print_string(%x)
 	li $v0, 4
 	la $a0, %x
 	syscall
