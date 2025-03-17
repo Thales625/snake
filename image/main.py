@@ -1,16 +1,25 @@
 from PIL import Image
+import os
 
-with Image.open('image.png') as img:
-	img = img.resize((64, 64))
-	
-	img = img.transpose(Image.ROTATE_90)
+directory = os.path.dirname(os.path.abspath(__file__))
 
-	pixels = []
+for filename in os.listdir(directory):
+	if filename.endswith('.png'):
+		img_path = os.path.join(directory, filename)
+		asm_path = os.path.join(directory, f'{os.path.splitext(filename)[0]}.asm')
 
-	for x in range(img.width):
-		for y in range(img.height):
-			pixel = img.getpixel((x, y))
-			pixels.append(f'0x00{pixel[0]:02X}{pixel[1]:02X}{pixel[2]:02X}')
+		with Image.open(img_path) as img:
+			img = img.resize((64, 64))
+			
+			img = img.transpose(Image.ROTATE_90)
+			img = img.transpose(Image.FLIP_LEFT_RIGHT)
 
-	with open('data.asm', 'w') as f:
-		f.write(".data\n\tframebuffer: .word " + ",".join(pixels))
+			pixels = []
+
+			for x in range(img.width):
+				for y in range(img.height):
+					pixel = img.getpixel((x, y))
+					pixels.append(f'0x00{pixel[0]:02X}{pixel[1]:02X}{pixel[2]:02X}')
+
+			with open(asm_path, 'w') as f:
+				f.write(".word " + ",".join(pixels[::-1]))
