@@ -197,6 +197,8 @@
 framebuffer: .space 0x4000 # width * heigth * 4 = 64 * 64 * 4
 stack: .space 0x8000 # 2 * 4 * width * height
 game_over_string: .asciiz "Game Over"
+.align 2
+game_over_image: .include "image/game_over.asm" # GameOver Image
 
 .text
 la DISPLAY_START_ADDR, framebuffer
@@ -217,20 +219,7 @@ addi NONE, $zero, -1
 		bgtz $t0, loop_clear_stack
 # END
 
-# CLEAR MEMORY
-	# $t0 -> DISPLAY_PTR
-	# $t1 -> end address
-	li $t1, WIDTH # $t1 = WIDTH
-	mul $t1, $t1, HEIGHT # $t1 *= HEIGHT
-	sll $t1, $t1, 2 # $t1 *= 4
-	add $t1, $t1, DISPLAY_START_ADDR
-
-	move DISPLAY_PTR, DISPLAY_START_ADDR
-	loop_clear_memory:
-		sw $zero, (DISPLAY_PTR)
-		addi DISPLAY_PTR, DISPLAY_PTR, 4
-		blt DISPLAY_PTR, $t1, loop_clear_memory
-# END
+jal clear_memory
 
 # SETUP
 	# populate stack
@@ -281,7 +270,6 @@ addi NONE, $zero, -1
 # END
 
 loop:
-	# sleep(500)
 	sleep(66)
 	update()
 	get_input()
@@ -298,7 +286,25 @@ plot:
 	sw COLOR, 0(DISPLAY_PTR)
 	jr $ra
 
+clear_memory:
+	# DISPLAY_PTR -> $t0
+	# $t1 -> end address
+	li $t1, WIDTH # $t1 = WIDTH
+	mul $t1, $t1, HEIGHT # $t1 *= HEIGHT
+	sll $t1, $t1, 2 # $t1 *= 4
+	add $t1, $t1, DISPLAY_START_ADDR # $t1 += DISPLAY_START_ADDR
+
+	move DISPLAY_PTR, DISPLAY_START_ADDR
+	loop_clear_memory:
+		sw $zero, (DISPLAY_PTR)
+		addi DISPLAY_PTR, DISPLAY_PTR, 4
+		blt DISPLAY_PTR, $t1, loop_clear_memory
+	jr $ra
+
 game_over:
 	print_string(game_over_string)
+	jal clear_memory
+
+	# TODO: DRAW GAMEOVER IMAGE
 
 end: done()
