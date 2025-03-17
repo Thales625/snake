@@ -28,6 +28,9 @@
 .eqv HEAD_NEXT_X $t6
 .eqv HEAD_NEXT_Y $t7
 
+.eqv KEY $t0
+.eqv AUX $t1
+
 # CONSTS
 .eqv WIDTH 64
 .eqv HEIGHT 64
@@ -61,27 +64,82 @@
 	blt $t0, STACK_HEAD_PTR, loop_shift_stack
 .end_macro
 
+.macro check_head_body_collision
+	# $t0 -> i
+	# $t1 -> x
+	# $t2 -> y
+	move $t0, STACK_START_ADDR
+	head_body_collision_loop:
+		lw $t1, 0($t0) # x
+		lw $t2, 4($t0) # y 
+
+		beq $t1, HEAD_NEXT_X, head_body_collision_eq_x
+		j head_body_collision_neq_x 
+		head_body_collision_eq_x: beq $t2, HEAD_NEXT_Y, game_over
+		head_body_collision_neq_x:
+
+		addi $t0, $t0, 8
+
+		blt $t0, STACK_HEAD_PTR, head_body_collision_loop
+.end_macro
+
 .macro update_apple
 	# $t0 -> i
 	# $t1 -> x
 	# $t2 -> y
-	loop_update_apple_1:
+	update_apple_generate:
 	random_int(APPLE_X, WIDTH)
 	random_int(APPLE_Y, HEIGHT)
 
 	# check if not colliding with snake
-
 	move $t0, STACK_START_ADDR
-	loop_update_apple_2:
+	update_apple_loop:
 		lw $t1, 0($t0) # x
 		lw $t2, 4($t0) # y 
 
-		beq $t1, APPLE_X, loop_update_apple_1
-		beq $t2, APPLE_Y, loop_update_apple_1
+		beq $t1, APPLE_X, update_apple_generate
+		beq $t2, APPLE_Y, update_apple_generate
 
 		addi $t0, $t0, 8
 
-		ble $t0, STACK_HEAD_PTR, loop_update_apple_2
+		ble $t0, STACK_HEAD_PTR, update_apple_loop
+.end_macro
+
+.macro get_input
+	# wait
+    lw KEY, 0xffff0000
+    andi KEY, KEY, 0x0001
+    beq KEY, $zero, loop # not ready
+
+	lw KEY, 0xffff0004 # load key
+	
+	beq	KEY, 100, move_right # d
+	beq	KEY, 97, move_left	# a
+	beq	KEY, 119, move_up	# w
+	beq	KEY, 115, move_down	# s
+
+	move_right:
+		beq MOVE_X, NONE, loop # MOVE_X == -1 : j loop
+		addi MOVE_X, $zero, 1
+		addi MOVE_Y, $zero, 0
+		j loop
+	move_left:
+		addi AUX, $zero, 1
+		beq MOVE_X, AUX, loop # MOVE_X == 1 : j loop
+		addi MOVE_X, $zero, -1
+		addi MOVE_Y, $zero, 0
+		j loop
+	move_up:
+		addi AUX, $zero, 1
+		beq MOVE_Y, AUX, loop # MOVE_Y == 1 : j loop
+		addi MOVE_X, $zero, 0
+		addi MOVE_Y, $zero, -1
+		j loop
+	move_down:
+		beq MOVE_Y, NONE, loop # MOVE_Y == -1 : j loop
+		addi MOVE_X, $zero, 0
+		addi MOVE_Y, $zero, 1
+		j loop
 .end_macro
 
 .macro update
@@ -90,6 +148,8 @@
 
 	lw HEAD_NEXT_Y, 4(STACK_HEAD_PTR) # head_next_y
 	add HEAD_NEXT_Y, HEAD_NEXT_Y, MOVE_Y
+
+	check_head_body_collision()
 
 	# plot snake head
 	set_color(GREEN)
@@ -136,6 +196,7 @@
 .data
 framebuffer: .space 0x4000 # width * heigth * 4 = 64 * 64 * 4
 stack: .space 0x8000 # 2 * 4 * width * height
+game_over_string: .asciiz "Game Over"
 
 .text
 la DISPLAY_START_ADDR, framebuffer
@@ -150,10 +211,25 @@ addi NONE, $zero, -1
 
 	move STACK_HEAD_PTR, STACK_START_ADDR
 	loop_clear_stack:
-	sw NONE, (STACK_HEAD_PTR)
-	addi STACK_HEAD_PTR, STACK_HEAD_PTR, 4
-	addi $t0, $t0, -1
-	bgt $t0, NONE, loop_clear_stack
+		sw NONE, (STACK_HEAD_PTR)
+		addi STACK_HEAD_PTR, STACK_HEAD_PTR, 4
+		addi $t0, $t0, -1
+		bgtz $t0, loop_clear_stack
+# END
+
+# CLEAR MEMORY
+	# $t0 -> DISPLAY_PTR
+	# $t1 -> end address
+	li $t1, WIDTH # $t1 = WIDTH
+	mul $t1, $t1, HEIGHT # $t1 *= HEIGHT
+	sll $t1, $t1, 2 # $t1 *= 4
+	add $t1, $t1, DISPLAY_START_ADDR
+
+	move DISPLAY_PTR, DISPLAY_START_ADDR
+	loop_clear_memory:
+		sw $zero, (DISPLAY_PTR)
+		addi DISPLAY_PTR, DISPLAY_PTR, 4
+		blt DISPLAY_PTR, $t1, loop_clear_memory
 # END
 
 # SETUP
@@ -176,6 +252,18 @@ addi NONE, $zero, -1
 	sw $t0, (STACK_HEAD_PTR)
 	addi $t0, $zero, 1 # y
 	sw $t0, 4(STACK_HEAD_PTR)
+
+	addi STACK_HEAD_PTR, STACK_HEAD_PTR, 8
+	addi $t0, $zero, 4 # x
+	sw $t0, (STACK_HEAD_PTR)
+	addi $t0, $zero, 1 # y
+	sw $t0, 4(STACK_HEAD_PTR)
+
+	addi STACK_HEAD_PTR, STACK_HEAD_PTR, 8
+	addi $t0, $zero, 5 # x
+	sw $t0, (STACK_HEAD_PTR)
+	addi $t0, $zero, 1 # y
+	sw $t0, 4(STACK_HEAD_PTR)
 	
 	# apple
 	addi APPLE_X, $zero, 3
@@ -193,8 +281,10 @@ addi NONE, $zero, -1
 # END
 
 loop:
-	sleep(1000)
+	# sleep(500)
+	sleep(66)
 	update()
+	get_input()
 	j loop
 
 # subroutines
@@ -207,5 +297,8 @@ plot:
 
 	sw COLOR, 0(DISPLAY_PTR)
 	jr $ra
+
+game_over:
+	print_string(game_over_string)
 
 end: done()
