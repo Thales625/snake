@@ -36,10 +36,9 @@
 .eqv HEIGHT 64
 
 # COLORS (0x--RRGGBB)
-.eqv RED 0x00ff0000
-.eqv GREEN 0x0000ff00
-.eqv BLUE 0x000000ff
-.eqv BACKGROUND 0x00000000
+.eqv COLOR_APPLE 0x00ff0000
+.eqv COLOR_SNAKE 0x0000ff00
+.eqv COLOR_BACKGROUND 0x00000000
 
 # MACROS
 .include "utils.asm"
@@ -64,7 +63,19 @@
 	blt $t0, STACK_HEAD_PTR, loop_shift_stack
 .end_macro
 
-.macro check_head_body_collision
+.macro check_head_collision
+	# WALL COLLISION
+	# $t0 -> aux
+	bltz HEAD_NEXT_X, game_over
+	bltz HEAD_NEXT_Y, game_over
+
+	addi $t0, $zero, WIDTH
+	bge HEAD_NEXT_X, $t0, game_over
+
+	addi $t0, $zero, HEIGHT
+	bge HEAD_NEXT_Y, $t0, game_over
+
+	# BODY COLLISION
 	# $t0 -> i
 	# $t1 -> x
 	# $t2 -> y
@@ -105,6 +116,13 @@
 		ble $t0, STACK_HEAD_PTR, update_apple_loop
 .end_macro
 
+.macro plot_apple
+	set_color(COLOR_APPLE)
+	move DISPLAY_X, APPLE_X
+	move DISPLAY_Y, APPLE_Y
+	jal plot
+.end_macro
+
 .macro get_input
 	# wait
     lw KEY, 0xffff0000
@@ -117,6 +135,7 @@
 	beq	KEY, 97, move_left	# a
 	beq	KEY, 119, move_up	# w
 	beq	KEY, 115, move_down	# s
+	j loop
 
 	move_right:
 		beq MOVE_X, NONE, loop # MOVE_X == -1 : j loop
@@ -149,10 +168,10 @@
 	lw HEAD_NEXT_Y, 4(STACK_HEAD_PTR) # head_next_y
 	add HEAD_NEXT_Y, HEAD_NEXT_Y, MOVE_Y
 
-	check_head_body_collision()
+	check_head_collision()
 
 	# plot snake head
-	set_color(GREEN)
+	set_color(COLOR_SNAKE)
 	move DISPLAY_X, HEAD_NEXT_X
 	move DISPLAY_Y, HEAD_NEXT_Y
 	jal plot
@@ -168,17 +187,14 @@
 		# update apple position
 		update_apple()
 		# plot apple
-		set_color(RED)
-		move DISPLAY_X, APPLE_X
-		move DISPLAY_Y, APPLE_Y
-		jal plot
+		plot_apple()
 
 		j update_end
 
 	# CASE NOT EAT
 	update_case_not_eat:
 		# clear shifted point (last snake tail)
-		set_color(BACKGROUND)
+		set_color(COLOR_BACKGROUND)
 		lw DISPLAY_X, (STACK_START_ADDR)  # x
 		lw DISPLAY_Y, 4(STACK_START_ADDR) # y
 		jal plot
@@ -198,7 +214,8 @@ framebuffer: .space 0x4000 # width * heigth * 4 = 64 * 64 * 4
 stack: .space 0x8000 # 2 * 4 * width * height
 game_over_string: .asciiz "Game Over"
 .align 2
-game_over_image: .include "image/game_over.asm" # GameOver Image
+game_over_image:
+.include "image/game_over.asm" # GameOver Image
 
 .text
 la DISPLAY_START_ADDR, framebuffer
@@ -259,10 +276,7 @@ jal clear_memory
 	addi APPLE_Y, $zero, 6
 
 	# plot apple
-	set_color(RED)
-	move DISPLAY_X, APPLE_X
-	move DISPLAY_Y, APPLE_Y
-	jal plot
+	plot_apple()
 
 	# move
 	addi MOVE_X, $zero, 0
@@ -270,7 +284,7 @@ jal clear_memory
 # END
 
 loop:
-	sleep(66)
+	sleep(100)
 	update()
 	get_input()
 	j loop
@@ -303,8 +317,38 @@ clear_memory:
 
 game_over:
 	print_string(game_over_string)
-	jal clear_memory
 
-	# TODO: DRAW GAMEOVER IMAGE
+	# jal clear_memory
+
+	# DRAW GAMEOVER IMAGE
+		# $t0 -> DISPLAY_PTR
+		# $t1 -> IMAGE_PTR
+		# $t2 -> index
+		li $t2, WIDTH # $t2 = WIDTH
+		mul $t2, $t2, HEIGHT # $t2 *= HEIGHT
+		sll $t2, $t2, 2 # $t2 *= 4
+
+		la $t1, game_over_image
+		add $t1, $t1, $t2
+
+		move DISPLAY_PTR, DISPLAY_START_ADDR
+		add DISPLAY_PTR, DISPLAY_PTR, $t2
+
+		# $t3 -> image color
+		draw_image_loop:
+			lw $t3, ($t1)
+
+			beqz $t3, draw_image_skip
+
+			sw $t3, (DISPLAY_PTR)
+
+			draw_image_skip:
+			addi $t1, $t1, -4
+			addi DISPLAY_PTR, DISPLAY_PTR, -4
+
+			addi $t2, $t2, -4 # index -= 4
+
+			bgez $t2, draw_image_loop
+	# END
 
 end: done()
