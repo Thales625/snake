@@ -188,6 +188,8 @@
 		update_apple()
 		# plot apple
 		plot_apple()
+		# play sound
+		play_sound(90, 100, 6, 30)
 
 		j update_end
 
