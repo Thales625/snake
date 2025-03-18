@@ -33,6 +33,17 @@
 	add %save_reg, $zero, $a0
 .end_macro
 
+.macro play_sound(%pitch, %duration, %instrument, %volume)
+	li $v0, 31
+
+	li $a0, %pitch
+	li $a1, %duration
+	li $a2, %instrument
+	li $a3, %volume
+
+	syscall
+.end_macro
+
 .macro sleep(%time) # seconds
 	li $v0, 32
 	li $a0, %time
