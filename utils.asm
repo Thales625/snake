@@ -24,7 +24,6 @@
 	syscall
 .end_macro
 
-
 .macro random_int(%save_reg, %max)
 	li $a1, %max
     li $v0, 42
