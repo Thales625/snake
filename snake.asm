@@ -189,7 +189,7 @@
 		# plot apple
 		plot_apple()
 		# play sound
-		play_sound(90, 100, 6, 30)
+		play_sound(50, 200, 10, 50)
 
 		j update_end
 
@@ -212,7 +212,7 @@
 .end_macro
 
 .data
-framebuffer: .space 0x4000 # width * heigth * 4 = 64 * 64 * 4
+framebuffer: .space 0x4000 # 4 * width * heigth = 4 * 64 * 64
 stack: .space 0x8000 # 2 * 4 * width * height
 game_over_string: .asciiz "Game Over"
 .align 2
@@ -319,6 +319,8 @@ clear_memory:
 
 game_over:
 	print_string(game_over_string)
+
+	play_sound(60, 200, 6, 40)
 
 	# jal clear_memory
 
