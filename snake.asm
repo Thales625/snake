@@ -1,11 +1,14 @@
 # Bitmap display config
-#	Widht = 8
-#	Height = 8
+#	Unit Width = 8
+#	Unit Height = 8
 #
 #	Display Width = 512
-#	Display Heigth = 512
+#	Display Height = 512
 #
 #	Base address = 0x10010000 (static data)
+
+# width = Display Width / Unit Width = 64
+# height = Display Height / Unit Height = 64
 
 # REGISTERS
 .eqv NONE $s0
@@ -21,6 +24,8 @@
 
 .eqv APPLE_X $s5
 .eqv APPLE_Y $s6
+
+.eqv SCORE $s7
 
 .eqv MOVE_X $t4
 .eqv MOVE_Y $t5
@@ -190,6 +195,8 @@
 		plot_apple()
 		# play sound
 		play_sound(50, 200, 10, 50)
+		# increase SCORE
+		addi SCORE, SCORE, 1
 
 		j update_end
 
@@ -212,9 +219,9 @@
 .end_macro
 
 .data
-framebuffer: .space 0x4000 # 4 * width * heigth = 4 * 64 * 64
+framebuffer: .space 0x4000 # 4 * width * height = 4 * 64 * 64
 stack: .space 0x8000 # 2 * 4 * width * height
-game_over_string: .asciiz "Game Over"
+score_string: .asciiz "Game Over\nSeu score foi de: "
 .align 2
 game_over_image:
 .include "image/game_over.asm" # GameOver Image
@@ -224,7 +231,12 @@ la DISPLAY_START_ADDR, framebuffer
 la STACK_START_ADDR, stack
 addi NONE, $zero, -1
 
-# CLEAR STACK
+# SETUP
+setup:
+	# clear screen
+	jal clear_memory
+
+	# clear stack
 	# $t0 -> counter
 	li $t0, WIDTH
 	mul $t0, $t0, HEIGHT
@@ -236,11 +248,7 @@ addi NONE, $zero, -1
 		addi STACK_HEAD_PTR, STACK_HEAD_PTR, 4
 		addi $t0, $t0, -1
 		bgtz $t0, loop_clear_stack
-# END
 
-jal clear_memory
-
-# SETUP
 	# populate stack
 	# $t0 -> aux
 	move STACK_HEAD_PTR, STACK_START_ADDR
@@ -283,6 +291,9 @@ jal clear_memory
 	# move
 	addi MOVE_X, $zero, 0
 	addi MOVE_Y, $zero, 1
+
+	# reset score
+	addi SCORE, $zero, 0
 # END
 
 loop:
@@ -291,7 +302,7 @@ loop:
 	get_input()
 	j loop
 
-# subroutines
+# SUBROUTINES
 j end
 plot:
 	mul DISPLAY_Y, DISPLAY_Y, WIDTH
@@ -318,11 +329,9 @@ clear_memory:
 	jr $ra
 
 game_over:
-	print_string(game_over_string)
-
 	play_sound(60, 200, 6, 40)
 
-	# jal clear_memory
+	# jal clear_memory # clear screen
 
 	# DRAW GAMEOVER IMAGE
 		# $t0 -> DISPLAY_PTR
@@ -354,5 +363,28 @@ game_over:
 
 			bgez $t2, draw_image_loop
 	# END
+
+	# show score
+	message_dialog_int(score_string, SCORE)
+
+	wait_any_key:
+	sleep(200)
+    lw KEY, 0xffff0000
+    andi KEY, KEY, 0x0001
+    beq KEY, $zero, wait_any_key
+	# key pressed
+
+	# check quit
+	lw KEY, 0xffff0004 # load key
+	beq KEY, 113, quit # q
+
+	# not quit
+	j setup
+
+	# quit
+	quit: la $ra, end
+	j clear_memory
+	# jal clear_memory
+	# j end
 
 end: done()

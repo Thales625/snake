@@ -43,6 +43,13 @@
 	syscall
 .end_macro
 
+.macro message_dialog_int(%address, %reg)
+	li $v0, 56
+	la $a0, %address
+	move $a1, %reg
+	syscall
+.end_macro
+
 .macro sleep(%time) # seconds
 	li $v0, 32
 	li $a0, %time
